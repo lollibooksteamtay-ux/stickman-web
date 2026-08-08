@@ -1,0 +1,30 @@
+# Phụ thuộc và bản build — cài lại bằng npm install
+node_modules/
+.next/
+out/
+
+# Bí mật: .env THẬT không bao giờ lên kho. Giữ .env.mau làm mẫu điền tay.
+.env
+.env.local
+web/.env
+web/.env.local
+
+# Dữ liệu chạy máy, không phải mã nguồn
+storage/
+pipeline/jobs/
+__pycache__/
+*.pyc
+
+# Nhạc nền: file nặng, kho thật nằm trên máy chủ
+pipeline/assets/nhac/*.m4a
+pipeline/assets/nhac/*.mp3
+pipeline/assets/nhac/*.wav
+pipeline/assets/nhac/*.aac
+
+# Rác máy Mac
+.DS_Store
+
+# Đồ vận hành nội bộ — có IP/cổng máy chủ, không đưa lên kho chung
+CLAUDE.md
+RETRO-06-08.md
+deploy/deploy.sh

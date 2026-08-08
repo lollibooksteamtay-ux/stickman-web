@@ -1,0 +1,17 @@
+[Unit]
+Description=Stickman web (Next.js :3013)
+After=network.target
+
+[Service]
+Type=simple
+User=stickman
+WorkingDirectory=/opt/stickman/web
+EnvironmentFile=/opt/stickman/web/.env
+Environment=NODE_ENV=production
+Environment=PATH=/root/.nvm/versions/node/v22.22.2/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/root/.nvm/versions/node/v22.22.2/bin/node node_modules/next/dist/bin/next start -p 3013
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

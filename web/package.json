@@ -1,0 +1,19 @@
+{
+  "name": "stickman-web",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3013",
+    "build": "next build",
+    "start": "next start -p 3013",
+    "worker": "node worker/worker.js"
+  },
+  "dependencies": {
+    "archiver": "^8.0.0",
+    "bcryptjs": "^3.0.2",
+    "next": "^16",
+    "pg": "^8.13.1",
+    "react": "^19",
+    "react-dom": "^19"
+  }
+}
