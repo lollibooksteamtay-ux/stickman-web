@@ -167,7 +167,7 @@ export default function TrangQuanTri() {
   const [days, setDays] = useState(7);
   const [st, setSt] = useState(null);
   const [tb, setTb] = useState(null); // {loai, chu}
-  const [formUser, setFormUser] = useState({ username: '', name: '', pass: '' });
+  const [formUser, setFormUser] = useState({ username: '', name: '', pass: '', thi_truong: 'vn' });
   const [keyAnh, setKeyAnh] = useState('');
   const [keyText, setKeyText] = useState('');
   const [keysFree, setKeysFree] = useState('');
@@ -208,7 +208,19 @@ export default function TrangQuanTri() {
     const d = await r.json();
     if (!r.ok) { bao('loi', d.loi); return; }
     bao('ok', `Đã tạo tài khoản ${d.user.username}`);
-    setFormUser({ username: '', name: '', pass: '' });
+    setFormUser({ username: '', name: '', pass: '', thi_truong: 'vn' });
+    tai();
+  }
+
+  async function doiThiTruong(id, ttMoi) {
+    const r = await fetch(`/api/admin/users/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'thi_truong', thi_truong: ttMoi }),
+    });
+    const d = await r.json();
+    if (!r.ok) { bao('loi', d.loi); return; }
+    bao('ok', `Đã chuyển sang thị trường ${ttMoi === 'kh' ? 'Campuchia' : 'Việt Nam'}`);
     tai();
   }
 
@@ -316,7 +328,13 @@ export default function TrangQuanTri() {
             <tbody>
               {data?.theo_user?.map((x) => (
                 <tr key={x.id}>
-                  <td><a className="ten" href={`/admin/user/${x.id}`}>{x.name || x.username}</a> <span className="dim">{x.username}</span></td>
+                  <td>
+                    <a className="ten" href={`/admin/user/${x.id}`}>{x.name || x.username}</a> <span className="dim">{x.username}</span>{' '}
+                    <button className="btn-tt" title="Bấm để đổi thị trường — quyết định video của người này làm tiếng gì"
+                      onClick={() => doiThiTruong(x.id, x.thi_truong === 'kh' ? 'vn' : 'kh')}>
+                      {x.thi_truong === 'kh' ? '🇰🇭 Campuchia' : '🇻🇳 Việt Nam'}
+                    </button>
+                  </td>
                   <td className="num">{x.hom_nay}</td>
                   <td className="num">{x.trong_ky}</td>
                   <td>{x.loi > 0 ? <span style={{ color: '#c22', fontWeight: 700 }}>{x.loi}</span> : 0}</td>
@@ -342,6 +360,10 @@ export default function TrangQuanTri() {
               onChange={(e) => setFormUser({ ...formUser, name: e.target.value })} />
             <input placeholder="Mật khẩu (≥6 ký tự)" required minLength={6} value={formUser.pass}
               onChange={(e) => setFormUser({ ...formUser, pass: e.target.value })} />
+            <select value={formUser.thi_truong || 'vn'} onChange={(e) => setFormUser({ ...formUser, thi_truong: e.target.value })}>
+              <option value="vn">🇻🇳 Việt Nam</option>
+              <option value="kh">🇰🇭 Campuchia</option>
+            </select>
             <button className="btn-sm chinh">+ Tạo tài khoản</button>
           </form>
         </div>

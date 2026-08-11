@@ -354,6 +354,12 @@ run([FF, "-y", "-loglevel", "error", "-i", str(hinh), "-i", str(tieng),
      "-c:v", "copy", "-c:a", "aac", "-ar", "24000", str(noi)])
 
 # 3) Phụ đề ASS — chữ ĐEN in hoa trên đầu khung (kiểu Thì Thầm), font đã kiểm chứng đủ dấu
+# Chữ Khmer → ép font Khmer, phòng chạy tay/đường gọi nào đó không truyền FONT_CHU (bẫy b6 11/08)
+if any(any("\u1780" <= ch <= "\u17ff" for ch in (t or "")) for _, _, t in moc):
+    if "khmer" not in FONT_CHU.lower():
+        FONT_CHU = "Noto Sans Khmer"
+    if "khmer" not in FONT_BRAND.lower():
+        FONT_BRAND = FONT_CHU
 ass = tmp / "chu.ass"
 header = """[Script Info]
 PlayResX: 1080

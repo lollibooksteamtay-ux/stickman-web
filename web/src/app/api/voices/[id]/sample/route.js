@@ -11,7 +11,8 @@ export async function GET(req, { params }) {
   const { id } = await params;
   if (!laGiongHopLe(id)) return new Response(null, { status: 404 });
 
-  const file = path.join(process.env.PIPELINE_DIR || '/opt/stickman/pipeline', 'assets', 'voices', `${id}.mp3`);
+  const tt = new URL(req.url).searchParams.get('tt') === 'kh' ? 'kh-' : '';
+  const file = path.join(process.env.PIPELINE_DIR || '/opt/stickman/pipeline', 'assets', 'voices', `${tt}${id}.mp3`);
   if (!fs.existsSync(file)) return new Response(null, { status: 404 });
   return new Response(Readable.toWeb(fs.createReadStream(file)), {
     headers: { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'private, max-age=300' },

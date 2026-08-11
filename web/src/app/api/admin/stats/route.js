@@ -26,7 +26,7 @@ export async function GET(req) {
     q(`SELECT (created_at AT TIME ZONE '${TZ}')::date AS ngay, count(*)::int AS n
        FROM jobs WHERE created_at > now() - make_interval(days => $1)
        GROUP BY 1 ORDER BY 1`, [days]),
-    q(`SELECT u.id, u.username, u.name, u.status,
+    q(`SELECT u.id, u.username, u.name, u.status, u.thi_truong,
          count(j.id) FILTER (WHERE (j.created_at AT TIME ZONE '${TZ}')::date = (now() AT TIME ZONE '${TZ}')::date)::int AS hom_nay,
          count(j.id) FILTER (WHERE j.created_at > now() - make_interval(days => $1))::int AS trong_ky,
          count(j.id) FILTER (WHERE j.status='error' AND j.created_at > now() - make_interval(days => $1))::int AS loi,

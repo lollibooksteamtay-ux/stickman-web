@@ -23,6 +23,20 @@ anh_dir = job / "anh"
 FONT_HEAVY = os.environ.get("FONT_FILE_HEAVY", "/usr/share/fonts/truetype/noto/NotoSans-Black.ttf")
 if not pathlib.Path(FONT_HEAVY).exists():
     FONT_HEAVY = "/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf"
+
+# Chữ Khmer bắt buộc font Khmer — TỰ nhận diện theo nội dung, không chờ env truyền vào.
+# (Bẫy 11/08: nút "Sửa bìa" trên web chạy b6 KHÔNG kèm FONT_FILE_HEAVY → bìa Khmer vỡ font.)
+_chu_kiem = " ".join(sys.argv[2:3])
+try:
+    _chu_kiem += (job / "title.txt").read_text()
+except Exception:
+    pass
+if any("\u1780" <= ch <= "\u17ff" for ch in _chu_kiem) and "khmer" not in FONT_HEAVY.lower():
+    for _f in ("/usr/share/fonts/truetype/noto/NotoSansKhmer-Black.ttf",
+               "/usr/share/fonts/truetype/noto/NotoSansKhmer-Bold.ttf"):
+        if pathlib.Path(_f).exists():
+            FONT_HEAVY = _f
+            break
 MAU_VANG = "#" + os.environ.get("CHU_MAU", "FFD700").strip().lstrip("#")
 BRAND = os.environ.get("BRAND", "").strip()
 
@@ -67,8 +81,28 @@ def ve_bia(W, H, dich_xuong=0.10):
     img = nen2.crop((x0, y0, x0 + W, y0 + H))
     d = ImageDraw.Draw(img)
 
+    def _be_tu_dai(t, font, max_rong):
+        """Từ đơn quá rộng (chữ Khmer viết liền không dấu cách) → chặt theo CỤM KÝ TỰ.
+        Chỉ được cắt TRƯỚC phụ âm gốc Khmer (U+1780-17B3) và không cắt sau dấu ghép ្ (17D2)
+        — cắt bừa giữa cụm là chữ vỡ. Đã dính bẫy 11/08: dòng vàng tràn 2 mép bìa."""
+        if d.textlength(t, font=font) <= max_rong:
+            return [t]
+        manh, hien = [], ""
+        for i, ch in enumerate(t):
+            cat_duoc = ("\u1780" <= ch <= "\u17b3") and i > 0 and t[i - 1] != "\u17d2"
+            if hien and cat_duoc and d.textlength(hien + ch, font=font) > max_rong:
+                manh.append(hien)
+                hien = ch
+            else:
+                hien += ch
+        if hien:
+            manh.append(hien)
+        return manh
+
     def be_dong(text, font, max_rong):
-        tu, dong, cac_dong = text.split(), "", []
+        tu, dong, cac_dong = [], "", []
+        for t in text.split():
+            tu.extend(_be_tu_dai(t, font, max_rong))
         for t in tu:
             thu = f"{dong} {t}".strip()
             if d.textlength(thu, font=font) > max_rong and dong:

@@ -9,6 +9,17 @@ export const GIONG_DOC = [
   { id: 'Zephyr', ten: 'Mai',   mo_ta: 'Nữ · sáng tươi',  chidan: 'giọng nữ sáng, tươi tắn' },
   { id: 'Aoede',  ten: 'Thu',   mo_ta: 'Nữ · nhẹ nhàng',  chidan: 'giọng nữ nhẹ nhàng êm' },
 ];
+// Thị trường Campuchia: đúng 4 giọng (anh Tây chốt 11/08) — id vẫn là prebuilt voice Gemini,
+// "chidan" tiếng Anh nhét vào lệnh đọc để lái tuổi + chất giọng.
+export const GIONG_KH = [
+  { id: 'Puck',   ten: 'Dara',    mo_ta: 'Nam · trẻ',             chidan: 'an energetic Cambodian young man in his early 20s, bright lively voice' },
+  { id: 'Leda',   ten: 'Bopha',   mo_ta: 'Nữ · trẻ',              chidan: 'a cheerful Cambodian young woman in her early 20s, clear friendly voice' },
+  { id: 'Charon', ten: 'Sovann',  mo_ta: 'Nam · đứng tuổi 45-55', chidan: 'a calm Cambodian man around 50 years old, deep warm steady voice' },
+  { id: 'Kore',   ten: 'Sreymom', mo_ta: 'Nữ · đứng tuổi 45-55',  chidan: 'a composed Cambodian woman around 50 years old, warm firm trustworthy voice' },
+];
+export function dsGiongTheoThiTruong(tt) {
+  return tt === 'kh' ? GIONG_KH : GIONG_DOC;
+}
 export const GIONG_MAC_DINH = 'Charon';
 export function laGiongHopLe(id) {
   return GIONG_DOC.some((g) => g.id === id);

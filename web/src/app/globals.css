@@ -95,6 +95,11 @@ input:focus, select:focus { outline: none; border-color: var(--xanh) !important;
 .comp-grid { display: grid; grid-template-columns: 1.15fr 1fr; }
 .sec-hint { font-size: 12px; color: #6b7280; margin-top: 6px; }
 .comp-sec { padding: 14px 16px 16px; }
+.btn-tt { font-size: 11px; border: 1px solid var(--vien, #d5d9e0); background: #fff;
+  border-radius: 20px; padding: 2px 8px; cursor: pointer; margin-left: 6px; }
+.btn-tt:hover { border-color: #1440c8; }
+.tt-badge { margin-left: 8px; font-size: 11px; font-weight: 700; color: #8a4b00;
+  background: #fff2dd; border: 1px solid #f0ddbb; border-radius: 20px; padding: 2px 9px; vertical-align: 1px; }
 .comp-sec + .comp-sec { border-left: 1px solid var(--vien); }
 .sec-label {
   font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .7px;

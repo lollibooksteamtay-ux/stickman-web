@@ -315,12 +315,20 @@ const VUNG_GIONG = {
   Aoede: 'giọng nữ nhẹ nhàng êm',
 };
 
+// Thị trường Campuchia: 4 giọng theo tuổi (anh Tây chốt 11/08) — chỉ dẫn tiếng Anh lái tuổi + chất giọng
+const GIONG_KH_CHIDAN = {
+  Puck: 'an energetic Cambodian young man in his early 20s, bright lively voice',
+  Leda: 'a cheerful Cambodian young woman in her early 20s, clear friendly voice',
+  Charon: 'a calm Cambodian man around 50 years old, deep warm steady voice',
+  Kore: 'a composed Cambodian woman around 50 years old, warm firm trustworthy voice',
+};
+
 async function b4TaoVoice(job, dir, st, soCanh) {
   const giong = job.giong || st.giong_doc || 'Charon';
   const laKhmer = (job.thi_truong || 'vn') === 'kh';
   const vung = VUNG_GIONG[giong] || 'giọng miền Bắc chuẩn';
   const phongCach = laKhmer
-    ? 'brisk, confident, natural TikTok-style narration, no dragging, no long pauses'
+    ? `speak as ${GIONG_KH_CHIDAN[giong] || GIONG_KH_CHIDAN.Charon}, brisk short-video narration pace, natural, no long pauses`
     : `Đọc bằng ${vung}, nhanh gọn, dứt khoát, tự nhiên như người kể chuyện video ngắn TikTok, không kéo dài giọng, không ngắt nghỉ lâu`;
   await chayAI([path.join(PIPELINE, 'scripts', 'b4-tao-voice.py'), dir], {
     st, job, buoc: 'đọc voice', timeoutPhut: 20,

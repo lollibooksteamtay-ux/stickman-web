@@ -154,7 +154,7 @@ export async function POST(req) {
     `INSERT INTO jobs (user_id, source_url, voice_mode, giong, audio_ext, nhac_nhom, bia_text, thi_truong)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
     [u.id, link, voiceMode, giong, audioExt, nhacNhom, biaText,
-     ['vn', 'kh'].includes(thiTruong) ? thiTruong : 'vn']
+     u.thi_truong === 'kh' ? 'kh' : 'vn']  // thị trường khai báo THEO TÀI KHOẢN (anh Tây chốt 11/08), không tin client
   );
   const jobId = r.rows[0].id;
 

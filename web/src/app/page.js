@@ -272,7 +272,7 @@ export default function TrangChinh() {
   const [dangGui, setDangGui] = useState(false);
   const [dsGiong, setDsGiong] = useState([]);
   const [voiceMode, setVoiceMode] = useState('ai');   // 'ai' | 'upload'
-  const [thiTruong, setThiTruong] = useState('vn');   // 'vn' | 'kh' — Campuchia: dịch + đọc tiếng Khmer
+  const [thiTruong, setThiTruong] = useState('vn');   // lấy từ TÀI KHOẢN (/api/me) — admin khai báo 1 lần, không chọn lại từng video
   const [giong, setGiong] = useState('Charon');
   const [audioFile, setAudioFile] = useState(null);
   const [dangPhat, setDangPhat] = useState('');       // id giọng đang nghe thử
@@ -295,7 +295,9 @@ export default function TrangChinh() {
   useEffect(() => {
     fetch('/api/me').then(async (r) => {
       if (r.status === 401) { window.location.href = '/login'; return; }
-      setMe(await r.json());
+      const m = await r.json();
+      setMe(m);
+      setThiTruong(m.thi_truong === 'kh' ? 'kh' : 'vn');
     });
     fetch('/api/voices').then(async (r) => {
       if (r.ok) setDsGiong((await r.json()).giong || []);
@@ -323,7 +325,7 @@ export default function TrangChinh() {
     // Bấm lại giọng đang phát thì dừng
     if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     if (dangPhat === id) { setDangPhat(''); return; }
-    const a = new Audio(`/api/voices/${id}/sample?v=7giong`); // ?v đổi khi thay bộ giọng — né cache trình duyệt
+    const a = new Audio(`/api/voices/${id}/sample?tt=${thiTruong}&v=kh1`); // ?v đổi khi thay bộ giọng — né cache trình duyệt
     audioRef.current = a;
     setDangPhat(id);
     a.onended = () => setDangPhat('');
@@ -349,7 +351,6 @@ export default function TrangChinh() {
       const fd = new FormData();
       fd.set('url', link);
       fd.set('voice_mode', voiceMode);
-      fd.set('thi_truong', thiTruong);
       fd.set('giong', giong);
       if (voiceMode === 'upload') fd.set('audio', audioFile);
       fd.set('nhac_nhom', nhacNhom);
@@ -360,7 +361,7 @@ export default function TrangChinh() {
       r = await fetch('/api/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: link, giong, nhac_nhom: nhacNhom, thi_truong: thiTruong }),
+        body: JSON.stringify({ url: link, giong, nhac_nhom: nhacNhom }),
       });
     }
     const d = await r.json();
@@ -418,17 +419,10 @@ export default function TrangChinh() {
 
           <div className="comp-grid">
             <section className="comp-sec">
-              <div className="sec-label">Thị trường</div>
-              <div className="seg">
-                <button type="button" className={thiTruong === 'vn' ? 'on' : ''} onClick={() => setThiTruong('vn')}>🇻🇳 Việt Nam</button>
-                <button type="button" className={thiTruong === 'kh' ? 'on' : ''} onClick={() => setThiTruong('kh')}>🇰🇭 Campuchia</button>
+              <div className="sec-label">
+                Giọng đọc
+                {thiTruong === 'kh' && <span className="tt-badge">🇰🇭 Tiếng Khmer</span>}
               </div>
-              {thiTruong === 'kh' && (
-                <div className="sec-hint">Kịch bản tự dịch sang tiếng Khmer, voice + phụ đề + bìa đều tiếng Khmer</div>
-              )}
-            </section>
-            <section className="comp-sec">
-              <div className="sec-label">Giọng đọc</div>
               <div className="seg">
                 <button type="button" className={voiceMode === 'ai' ? 'on' : ''} onClick={() => setVoiceMode('ai')}>🎙 Giọng AI</button>
                 <button type="button" className={voiceMode === 'upload' ? 'on' : ''} onClick={() => setVoiceMode('upload')}>📁 Audio của tôi</button>

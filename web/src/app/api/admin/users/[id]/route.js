@@ -58,10 +58,15 @@ export async function PATCH(req, { params }) {
   const u = await nguoiDung();
   if (!u || u.role !== 'admin') return Response.json({ loi: 'Chỉ quản trị viên' }, { status: 403 });
   const { id } = await params;
-  const { action, pass } = await req.json().catch(() => ({}));
+  const { action, pass, thi_truong } = await req.json().catch(() => ({}));
 
   if (Number(id) === u.id && action === 'lock') {
     return Response.json({ loi: 'Không tự khoá tài khoản của chính mình' }, { status: 400 });
+  }
+  if (action === 'thi_truong') {
+    const tt = thi_truong === 'kh' ? 'kh' : 'vn';
+    await q(`UPDATE users SET thi_truong=$2 WHERE id=$1`, [id, tt]);
+    return Response.json({ ok: true, thi_truong: tt });
   }
   if (action === 'lock' || action === 'unlock') {
     await q(`UPDATE users SET status=$2 WHERE id=$1`, [id, action === 'lock' ? 'locked' : 'active']);

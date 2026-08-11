@@ -43,7 +43,7 @@ export async function nguoiDung() {
   const tk = docToken(store.get(TEN_COOKIE)?.value);
   if (!tk) return null;
   // Kiểm tra tài khoản còn hoạt động (bị khoá là văng ngay, không chờ cookie hết hạn)
-  const r = await q('SELECT id, username, email, name, role, status FROM users WHERE id=$1', [tk.uid]);
+  const r = await q('SELECT id, username, email, name, role, status, thi_truong FROM users WHERE id=$1', [tk.uid]);
   const u = r.rows[0];
   if (!u || u.status !== 'active') return null;
   return u;
