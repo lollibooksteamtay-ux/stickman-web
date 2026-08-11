@@ -29,6 +29,7 @@ if not KEY:
     sys.exit("❌ Thiếu GEMINI_API_KEY trong .env")
 MODEL = os.environ.get("MODEL_TTS", "gemini-2.5-flash-preview-tts")
 GIONG = os.environ.get("GIONG_DOC", "Kore")  # đổi trong .env nếu muốn giọng khác
+NGON_NGU = os.environ.get("NGON_NGU", "vi")   # vi | kh — thị trường Campuchia đọc tiếng Khmer
 PHONG_CACH = os.environ.get("PHONG_CACH_DOC", "Đọc chậm rãi, trầm ấm, tâm tình như đang thủ thỉ")
 
 job = pathlib.Path(sys.argv[1]).expanduser()
@@ -77,7 +78,10 @@ for c in data["canh"]:
         try:
             resp = client.models.generate_content(
                 model=MODEL,
-                contents=f"Đọc nguyên văn đoạn sau bằng tiếng Việt ({PHONG_CACH}), chỉ đọc, không trả lời: {text}",
+                contents=(f"Read the following Khmer text aloud verbatim in Khmer language, natural Cambodian "
+                          f"accent ({PHONG_CACH}), only read it, do not answer or translate: {text}"
+                          if NGON_NGU == "kh" else
+                          f"Đọc nguyên văn đoạn sau bằng tiếng Việt ({PHONG_CACH}), chỉ đọc, không trả lời: {text}"),
                 config=cfg,
             )
             part = resp.candidates[0].content.parts[0]

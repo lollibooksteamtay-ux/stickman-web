@@ -75,13 +75,14 @@ export async function POST(req) {
   const u = await nguoiDung();
   if (!u) return Response.json({ loi: 'Chưa đăng nhập' }, { status: 401 });
 
-  let link = '', giong = '', voiceMode = 'ai', audioFile = null, nhacNhom = '', biaText = '', nhacFile = null;
+  let link = '', giong = '', voiceMode = 'ai', audioFile = null, nhacNhom = '', biaText = '', nhacFile = null, thiTruong = 'vn';
   const ct = req.headers.get('content-type') || '';
   if (ct.includes('multipart/form-data')) {
     const fd = await req.formData().catch(() => null);
     if (!fd) return Response.json({ loi: 'Dữ liệu gửi lên hỏng' }, { status: 400 });
     link = String(fd.get('url') || '').trim();
     giong = String(fd.get('giong') || '').trim();
+    thiTruong = String(fd.get('thi_truong') || 'vn');
     voiceMode = String(fd.get('voice_mode') || 'ai');
     audioFile = fd.get('audio');
     nhacNhom = String(fd.get('nhac_nhom') || '').trim();
@@ -91,6 +92,7 @@ export async function POST(req) {
     const b = await req.json().catch(() => ({}));
     link = (b.url || '').trim();
     giong = (b.giong || '').trim();
+    thiTruong = String(b.thi_truong || 'vn');
     voiceMode = b.voice_mode || 'ai';
     nhacNhom = (b.nhac_nhom || '').trim();
     biaText = (b.bia_text || '').trim().slice(0, 100);
@@ -149,9 +151,10 @@ export async function POST(req) {
   }
 
   const r = await q(
-    `INSERT INTO jobs (user_id, source_url, voice_mode, giong, audio_ext, nhac_nhom, bia_text)
-     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-    [u.id, link, voiceMode, giong, audioExt, nhacNhom, biaText]
+    `INSERT INTO jobs (user_id, source_url, voice_mode, giong, audio_ext, nhac_nhom, bia_text, thi_truong)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+    [u.id, link, voiceMode, giong, audioExt, nhacNhom, biaText,
+     ['vn', 'kh'].includes(thiTruong) ? thiTruong : 'vn']
   );
   const jobId = r.rows[0].id;
 

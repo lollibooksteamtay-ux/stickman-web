@@ -60,19 +60,23 @@ RANG_BUOC = (
 # ĐOÀN NHÂN VẬT CỐ ĐỊNH (anh Tây tự vẽ, nạp qua Quản trị) — vừa là nhân vật, vừa là mỏ neo phong cách
 DAN_DIR = ROOT / "assets" / "nhan-vat"
 dan = {}
+dan_file = {}          # đường dẫn file, cho backend ngoài (key4u) gửi multipart
 for f in sorted(DAN_DIR.glob("*.png")):
     try:
         dan[f.stem] = types.Part.from_bytes(data=f.read_bytes(), mime_type="image/png")
+        dan_file[f.stem] = f
     except Exception:
         pass
 NV_CHINH = next((t for t in ("nam-chinh", "nam-trung-nien") if t in dan), (sorted(dan)[0] if dan else None))
 
 # Chỉ khi CHƯA có đoàn nhân vật mới quay lại dùng ảnh mẫu tay vẽ cũ
 mau_parts = []
+mau_files = []
 if not dan:
     for f in sorted((ROOT / "assets" / "mau-chuan").glob("*.png"))[:2]:
         try:
             mau_parts.append(types.Part.from_bytes(data=f.read_bytes(), mime_type="image/png"))
+            mau_files.append(f)
         except Exception:
             pass
     print(f"▶ Chưa có đoàn nhân vật — dùng {len(mau_parts)} ảnh mẫu tay vẽ")
@@ -84,8 +88,52 @@ QC_ANH = os.environ.get("QC_ANH", "1") == "1"
 MODEL_QC = os.environ.get("MODEL_QC", "gemini-3.1-flash-lite")
 
 
-def _ve_tho(contents, out_path, nhan):
+# ── NGUỒN ẢNH NGOÀI (key4u...) — chuẩn OpenAI /v1/images/edits ──────────────────
+# Đo thật 11/08: gpt-image-2-c qua key4u = 525đ/ảnh (Google trực tiếp 887đ, rẻ hơn 41%),
+# giữ ĐÚNG nhân vật cố định khi gửi kèm ảnh mẫu (đã thử ca 2 nhân vật/cảnh).
+# Hỏng thì TỰ RƠI VỀ Google — app đang có người dùng thật, không được chết giữa chừng.
+ANH_URL = os.environ.get("ANH_URL", "").strip().rstrip("/")
+ANH_KEY = os.environ.get("ANH_KEY", "").strip()
+ANH_MODEL = os.environ.get("ANH_MODEL", "").strip()
+ANH_CO = bool(ANH_URL and ANH_KEY and ANH_MODEL)
+
+
+def _ve_ngoai(prompt, ref_files, out_path, nhan):
+    """Vẽ qua nhà cung cấp ngoài. Trả True nếu ghi được file ảnh."""
+    import base64
+    import subprocess
+    cmd = ["curl", "-s", "-m", "300", "-o", "/dev/stdout", "-w", "\n%{http_code}",
+           f"{ANH_URL}/images/edits",
+           "-H", f"Authorization: Bearer {ANH_KEY}",
+           "-F", f"model={ANH_MODEL}", "-F", "size=1024x1536", "-F", "n=1",
+           "-F", f"prompt={prompt}"]
+    for f in ref_files[:2]:
+        cmd += ["-F", f"image[]=@{f}"]
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    body, _, code = r.stdout.rpartition("\n")
+    if code.strip() != "200":
+        print(f"  ⚠️ {nhan}: nguồn ngoài trả HTTP {code.strip()} — {body[-160:]}")
+        return False
+    try:
+        d = json.loads(body)
+        b64 = d["data"][0]["b64_json"]
+    except Exception as e:
+        print(f"  ⚠️ {nhan}: nguồn ngoài trả dữ liệu lạ ({e})")
+        return False
+    out_path.write_bytes(base64.b64decode(b64))
+    return True
+
+
+def _ve_tho(contents, out_path, nhan, ref_files=None):
     """Vẽ 1 ảnh (retry lỗi API 3 lần). Trả True nếu có file."""
+    if ANH_CO:
+        prompt = contents[-1] if isinstance(contents[-1], str) else str(contents[-1])
+        for lan in range(2):
+            if _ve_ngoai(prompt, ref_files or [], out_path, nhan):
+                return True
+            if lan == 0:
+                time.sleep(5)
+        print(f"  🔁 {nhan}: nguồn ngoài hỏng → quay về Google")
     for attempt in range(3):
         try:
             resp = client.models.generate_content(
@@ -154,9 +202,9 @@ def qc_ai(path, mo_ta):
     return True, ""
 
 
-def sinh_anh(contents, out_path, nhan, mo_ta=""):
+def sinh_anh(contents, out_path, nhan, mo_ta="", ref_files=None):
     """Vẽ + QC 2 lớp + tự vẽ lại 1 lần kèm lời chê nếu rớt."""
-    if not _ve_tho(contents, out_path, nhan):
+    if not _ve_tho(contents, out_path, nhan, ref_files):
         return False
     if not QC_ANH:
         print(f"  ✅ {nhan}: {out_path.name}")
@@ -170,7 +218,7 @@ def sinh_anh(contents, out_path, nhan, mo_ta=""):
     # Rớt QC → vẽ lại đúng 1 lần, nói rõ lỗi cho model sửa
     print(f"  🔁 {nhan}: rớt QC ({loi_qc[:80]}) — vẽ lại")
     lai = contents[:-1] + [str(contents[-1]) + f" PREVIOUS ATTEMPT WAS REJECTED because: {loi_qc}. Fix this."]
-    if _ve_tho(lai, out_path, nhan):
+    if _ve_tho(lai, out_path, nhan, ref_files):
         ok2, _ = qc_may(out_path)
         print(f"  ✅ {nhan}: {out_path.name} ({'QC đạt sau vẽ lại' if ok2 else 'vẫn chưa hoàn hảo — dùng bản tốt nhất'})")
         return True
@@ -188,12 +236,13 @@ elif goc.exists():
 else:
     print("▶ Tạo ảnh gốc nhân vật...")
     prompt_goc = json.dumps(data["prompt_nhan_vat_goc"], ensure_ascii=False) + RANG_BUOC
-    if not sinh_anh(mau_parts + [prompt_goc], goc, "nhân vật gốc", mo_ta=str(data["prompt_nhan_vat_goc"])):
+    if not sinh_anh(mau_parts + [prompt_goc], goc, "nhân vật gốc",
+                    mo_ta=str(data["prompt_nhan_vat_goc"]), ref_files=mau_files):
         sys.exit("❌ Không tạo được ảnh nhân vật gốc")
     goc_part = types.Part.from_bytes(data=goc.read_bytes(), mime_type="image/png")
 
 MAX_CANH = float(os.environ.get("MAX_CANH", "9.0"))   # cảnh dài hơn mức này cần VẼ THÊM ảnh
-CHU_MOI_GIAY = 17.97   # đo thật 08/08: 2513 ký tự / 139,9s voice (42 cảnh)                                   # tốc độ đọc tiếng Việt ~14-15 ký tự/giây
+CHU_MOI_GIAY = float(os.environ.get("KY_TU_GIAY", "17.97"))  # tiếng Việt 17,97 · Khmer 14,61 (worker truyền theo thị trường)
 
 # Ảnh phụ cho cảnh dài: mô tả "khoảnh khắc kế tiếp" để hình đổi thật, không phải zoom lại ảnh cũ
 GOC_MAY = [
@@ -237,16 +286,18 @@ for c in data["canh"]:
         if dan:
             ten_nv = [t for t in (c.get("nhan_vat") or []) if t in dan][:2] or ([NV_CHINH] if NV_CHINH else [])
             refs = [dan[t] for t in ten_nv]
+            refs_file = [dan_file[t] for t in ten_nv if t in dan_file]
             prompt += (f" Use the attached character reference image(s) as the EXACT character design and drawing "
                        f"style for the character(s) in this scene ({', '.join(ten_nv)}); keep the same head shape, "
                        f"same thin double-line chalk strokes, same proportions. Do not copy the reference pose.")
         else:
             ten_nv = []
             refs = mau_parts + ([goc_part] if goc_part else [])
+            refs_file = list(mau_files) + ([goc] if goc.exists() else [])
         nhan = (f"cảnh {i}" if k == 0 else f"cảnh {i} (ảnh phụ {k} — cảnh dài {d:.1f}s)") + \
                (f" [{'+'.join(ten_nv)}]" if ten_nv else "")
         mo_ta_qc = f"{c.get('loi_thoai', '')} — {str(c['prompt_kem_anh_goc'])[:300]}"
-        if not sinh_anh(refs + [prompt], out, nhan, mo_ta=mo_ta_qc):
+        if not sinh_anh(refs + [prompt], out, nhan, mo_ta=mo_ta_qc, ref_files=refs_file):
             loi.append(ten)
         time.sleep(2)  # tránh rate limit
 

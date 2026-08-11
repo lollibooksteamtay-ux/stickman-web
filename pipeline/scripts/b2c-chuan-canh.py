@@ -40,8 +40,9 @@ def uoc_giay(text):
 
 
 def tach_cau(text):
-    """Bẻ đoạn lời thành các CÂU, giữ nguyên dấu chấm câu."""
-    phan = re.split(r"(?<=[.!?…])\s+", text.strip())
+    """Bẻ đoạn lời thành các CÂU, giữ nguyên dấu chấm câu.
+    ។ ៕ = dấu chấm câu Khmer (b2t-dich đã ép luôn có dấu cách sau ។)."""
+    phan = re.split(r"(?<=[.!?…។៕])\s+", text.strip())
     return [p.strip() for p in phan if p.strip()]
 
 

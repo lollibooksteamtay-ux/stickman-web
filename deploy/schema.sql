@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   giong        TEXT NOT NULL DEFAULT '',        -- tên giọng Gemini người dùng chọn (voice_mode=ai)
   audio_ext    TEXT NOT NULL DEFAULT '',        -- đuôi file audio tải lên (voice_mode=upload)
   nhac_nhom    TEXT NOT NULL DEFAULT '',        -- '' ngẫu nhiên · 'khong' · 'nhom:x' · 'bai:x/y' · 'upload'
+  thi_truong text NOT NULL DEFAULT 'vn',
   bia_text     TEXT NOT NULL DEFAULT '',        -- chữ ảnh bìa "TRẮNG | VÀNG" ('' = dùng tiêu đề)
   bia_anh      TEXT NOT NULL DEFAULT '',        -- ảnh cảnh làm nền bìa ('' = tự chọn cảnh đậm nét nhất)
   bia_dau      BOOLEAN NOT NULL DEFAULT true,   -- gắn bìa 0,3s vào đầu video (kiểu CapCut)

@@ -93,6 +93,7 @@ input:focus, select:focus { outline: none; border-color: var(--xanh) !important;
 .comp-submit:disabled { opacity: .45; cursor: default; }
 
 .comp-grid { display: grid; grid-template-columns: 1.15fr 1fr; }
+.sec-hint { font-size: 12px; color: #6b7280; margin-top: 6px; }
 .comp-sec { padding: 14px 16px 16px; }
 .comp-sec + .comp-sec { border-left: 1px solid var(--vien); }
 .sec-label {

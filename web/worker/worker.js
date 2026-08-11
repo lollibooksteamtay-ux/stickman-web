@@ -173,12 +173,30 @@ async function chayAI(args, { st, keyAnh = false, job, buoc, onLine, timeoutPhut
   throw cuoi;
 }
 
+/** Env theo thị trường của job. Campuchia: dịch Khmer, đọc Khmer, font Khmer.
+ *  KY_TU_GIAY đo thật 11/08: Khmer 14,61 ký tự/giây (Việt 17,97) — sai số này mà bỏ qua
+ *  thì bộ chia cảnh ~6s sẽ chia lệch ~19%. SUB_KY_TU hạ 26→22 vì chữ Khmer bề ngang rộng hơn. */
+function envThiTruong(job) {
+  if ((job.thi_truong || 'vn') !== 'kh') return {};
+  return {
+    NGON_NGU: 'kh',
+    KY_TU_GIAY: '14.61',
+    SUB_KY_TU: '22',
+    FONT_CHU: 'Noto Sans Khmer',
+    FONT_FILE_HEAVY: '/usr/share/fonts/truetype/noto/NotoSansKhmer-Black.ttf',
+  };
+}
+
 function envPipeline(st, keyAnh = false) {
   return {
     PYTHONUNBUFFERED: '1', // để tiến độ "cảnh 5/10" nhảy realtime, không dồn cuối
     GEMINI_API_KEY: keyAnh ? st.gemini_key_image : st.gemini_key_text,
     MODEL_PHAN_TICH: st.model_phan_tich || 'gemini-3.6-flash',
     MODEL_ANH: st.model_anh || 'gemini-3.1-flash-image',
+    // Nguồn ảnh ngoài (key4u): rẻ hơn Google 41%. Chỉ bật khi đủ 3 ô; hỏng thì b3 tự về Google.
+    ANH_URL: keyAnh ? (st.anh_url || '') : '',
+    ANH_KEY: keyAnh ? (st.anh_key || '') : '',
+    ANH_MODEL: keyAnh ? (st.anh_model || '') : '',
     MODEL_TTS: st.model_tts || 'gemini-3.1-flash-tts-preview',
     GIONG_DOC: st.giong_doc || 'Kore', // bị ghi đè theo job nếu người dùng chọn giọng
     PHONG_CACH_DOC: st.phong_cach_doc || '',
@@ -227,11 +245,17 @@ async function b2PhanTich(job, dir, st) {
          job.source_url ? path.join(dir, 'goc.mp4') : '-', audio, paFile]
       : [path.join(PIPELINE, 'scripts', 'b2-phan-tich.py'), path.join(dir, 'goc.mp4'), paFile];
     await chayAI(args, { st, job, buoc: 'viết kịch bản', timeoutPhut: 12 });
+    // B2t: thị trường Campuchia → dịch kịch bản sang tiếng Khmer (key free, 0đ).
+    // Phải dịch TRƯỚC b2c: độ dài cảnh tính trên chữ tiếng đích, giọng đọc đọc tiếng đích.
+    if ((job.thi_truong || 'vn') === 'kh') {
+      await chayAI([path.join(PIPELINE, 'scripts', 'b2t-dich.py'), dir, 'kh'],
+        { st, job, buoc: 'dịch sang tiếng Khmer', timeoutPhut: 6 });
+    }
     // B2c: chuẩn hoá độ dài cảnh bằng CODE (~8s/cảnh, luôn cắt hết câu) — 0đ, không gọi AI.
     // AI đếm giây không tin được; nằm trong khối này để job cũ chạy lại KHÔNG bị xáo cảnh
     // (ảnh có thể đã vẽ theo cách chia cũ).
     await chay(PYTHON, [path.join(PIPELINE, 'scripts', 'b2c-chuan-canh.py'), dir],
-      { timeoutPhut: 2, onLine: (l) => log(`  ${l}`) });
+      { timeoutPhut: 2, env: envThiTruong(job), onLine: (l) => log(`  ${l}`) });
   }
   // B2b: đạo diễn hình ảnh — nghĩ ẩn dụ + bố cục cho từng cảnh (bỏ qua nếu đã chạy)
   try {
@@ -293,11 +317,14 @@ const VUNG_GIONG = {
 
 async function b4TaoVoice(job, dir, st, soCanh) {
   const giong = job.giong || st.giong_doc || 'Charon';
+  const laKhmer = (job.thi_truong || 'vn') === 'kh';
   const vung = VUNG_GIONG[giong] || 'giọng miền Bắc chuẩn';
-  const phongCach = `Đọc bằng ${vung}, nhanh gọn, dứt khoát, tự nhiên như người kể chuyện video ngắn TikTok, không kéo dài giọng, không ngắt nghỉ lâu`;
+  const phongCach = laKhmer
+    ? 'brisk, confident, natural TikTok-style narration, no dragging, no long pauses'
+    : `Đọc bằng ${vung}, nhanh gọn, dứt khoát, tự nhiên như người kể chuyện video ngắn TikTok, không kéo dài giọng, không ngắt nghỉ lâu`;
   await chayAI([path.join(PIPELINE, 'scripts', 'b4-tao-voice.py'), dir], {
     st, job, buoc: 'đọc voice', timeoutPhut: 20,
-    themEnv: { GIONG_DOC: giong, PHONG_CACH_DOC: phongCach },
+    themEnv: { GIONG_DOC: giong, PHONG_CACH_DOC: phongCach, ...envThiTruong(job) },
     onLine: (line) => {
       const m = line.match(/✅ cảnh (\d+)/);
       if (m) capNhat(job.id, { step_note: `đọc voice cảnh ${m[1]}/${soCanh}` }).catch(() => {});
@@ -311,6 +338,7 @@ async function b5Ghep(job, dir, st) {
     env: {
       ...envPipeline(st), PATH: process.env.PATH,
       ...envNhac(job, dir),
+      ...envThiTruong(job),
       ...(audio ? { VOICE_FILE: audio } : {}),
     },
     timeoutPhut: 20,
@@ -334,7 +362,7 @@ async function taoThumb(dir) {
 async function taoAnhBia(job, dir, st, tieuDe, anhNen = '') {
   try {
     await chay(PYTHON, [path.join(PIPELINE, 'scripts', 'b6-thumbnail.py'), dir, tieuDe || '', anhNen], {
-      env: envPipeline(st),
+      env: { ...envPipeline(st), ...envThiTruong(job) },
       timeoutPhut: 3,
     });
   } catch (e) {

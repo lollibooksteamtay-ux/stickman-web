@@ -272,6 +272,7 @@ export default function TrangChinh() {
   const [dangGui, setDangGui] = useState(false);
   const [dsGiong, setDsGiong] = useState([]);
   const [voiceMode, setVoiceMode] = useState('ai');   // 'ai' | 'upload'
+  const [thiTruong, setThiTruong] = useState('vn');   // 'vn' | 'kh' — Campuchia: dịch + đọc tiếng Khmer
   const [giong, setGiong] = useState('Charon');
   const [audioFile, setAudioFile] = useState(null);
   const [dangPhat, setDangPhat] = useState('');       // id giọng đang nghe thử
@@ -348,6 +349,7 @@ export default function TrangChinh() {
       const fd = new FormData();
       fd.set('url', link);
       fd.set('voice_mode', voiceMode);
+      fd.set('thi_truong', thiTruong);
       fd.set('giong', giong);
       if (voiceMode === 'upload') fd.set('audio', audioFile);
       fd.set('nhac_nhom', nhacNhom);
@@ -358,7 +360,7 @@ export default function TrangChinh() {
       r = await fetch('/api/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: link, giong, nhac_nhom: nhacNhom }),
+        body: JSON.stringify({ url: link, giong, nhac_nhom: nhacNhom, thi_truong: thiTruong }),
       });
     }
     const d = await r.json();
@@ -415,6 +417,16 @@ export default function TrangChinh() {
           </div>
 
           <div className="comp-grid">
+            <section className="comp-sec">
+              <div className="sec-label">Thị trường</div>
+              <div className="seg">
+                <button type="button" className={thiTruong === 'vn' ? 'on' : ''} onClick={() => setThiTruong('vn')}>🇻🇳 Việt Nam</button>
+                <button type="button" className={thiTruong === 'kh' ? 'on' : ''} onClick={() => setThiTruong('kh')}>🇰🇭 Campuchia</button>
+              </div>
+              {thiTruong === 'kh' && (
+                <div className="sec-hint">Kịch bản tự dịch sang tiếng Khmer, voice + phụ đề + bìa đều tiếng Khmer</div>
+              )}
+            </section>
             <section className="comp-sec">
               <div className="sec-label">Giọng đọc</div>
               <div className="seg">
